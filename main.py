@@ -18,6 +18,7 @@ from data import ImageFolder
 from Visualizer import Visualizer
 
 import Constants
+import image_utils
 
 # Please specify the ID of graphics cards that you want to use
 os.environ['CUDA_VISIBLE_DEVICES'] = "0"
