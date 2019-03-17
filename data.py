@@ -223,6 +223,7 @@ def read_RIM_ONE_datasets(root_path, mode='train'):
 
     return images, masks
 
+
 def read_DRIVE_datasets(root_path, mode='train'):
     images = []
     masks = []

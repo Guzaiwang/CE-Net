@@ -7,7 +7,7 @@ import numpy as np
 
 
 class MyFrame():
-    def __init__(self, net, loss, lr=2e-4, evalmode = False):
+    def __init__(self, net, loss, lr=2e-4, evalmode=False):
         self.net = net().cuda()
         self.net = torch.nn.DataParallel(self.net, device_ids=range(torch.cuda.device_count()))
         self.optimizer = torch.optim.Adam(params=self.net.parameters(), lr=lr)
