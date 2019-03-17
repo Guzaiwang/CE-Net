@@ -99,3 +99,8 @@ def CE_Net_Train():
     mylog.close()
 
 
+if __name__ == '__main__':
+    CE_Net_Train()
+
+
+
