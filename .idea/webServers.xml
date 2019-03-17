@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="9fb0cad6-0e5d-42cb-b7c9-4023e74dd6de" name="ustc" url="http://10.20.45.222">
+        <fileTransfer host="10.20.45.222" port="22" rootFolder="/home/jimmyliu/Zaiwang/CE-Net" accessType="SFTP">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" />
+          </advancedOptions>
+          <option name="port" value="22" />
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
