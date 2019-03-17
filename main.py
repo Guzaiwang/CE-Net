@@ -21,7 +21,7 @@ import Constants
 import image_utils
 
 # Please specify the ID of graphics cards that you want to use
-os.environ['CUDA_VISIBLE_DEVICES'] = "0"
+os.environ['CUDA_VISIBLE_DEVICES'] = "8"
 
 
 def CE_Net_Train():
@@ -100,6 +100,7 @@ def CE_Net_Train():
 
 
 if __name__ == '__main__':
+    print(torch.__version__())
     CE_Net_Train()
 
 

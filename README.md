@@ -1,10 +1,14 @@
 # CE-Net
 The manuscript has been accepted in TMI.
 
-The first submission mainly contains:
-1. Network: CE-Net and baselines
-2. Framework: training and test data augmentation
-3. Loss: binary (or multi-class) dice loss function
+Please start up the "visdom" before running the main.py.
+Then, run the main.py file.
 
-The submission (2019/3/18) mainly contains:
+We have uploaded the DRIVE dataset to run the retinal vessel detection. The other medical datasets will be
+uploaded in the next submission.
+
+The submission mainly contains:
+1. architecture (called CE-Net) in networks/cenet.py
+2. multi-class dice loss in loss.py
+3. data augmentation in data.py
 
