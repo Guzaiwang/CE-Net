@@ -67,43 +67,13 @@ def test_weight_cross_entropy():
     targets_fl = Variable(targets.clone())
     print(weighted_cross_entropy()(targets_fl, inputs_fl))
 
+
 class dice_bce_loss(nn.Module):
     def __init__(self, batch=True):
         super(dice_bce_loss, self).__init__()
         self.batch = batch
         self.bce_loss = nn.BCELoss()
-        self.ce_loss = nn.CrossEntropyLoss()
-        self.softmax = torch.nn.Softmax(dim=1)
 
-
-    def multi_class_one_hot(self, label, classes):
-        N, H, W = label.size(0), label.size(2), label.size(3)
-
-        # y_hot = torch.LongTensor(N, classes, H, W).cuda()
-        y_hot = torch.cuda.FloatTensor(N, classes, H, W)
-        y_hot.zero_()
-        # y_hot = y_hot.type(torch.cuda.LongTensor)
-        label = label.type(torch.cuda.LongTensor)
-        y_hot.scatter_(1, label.view(N, 1, H, W), 1)
-
-        return y_hot
-
-    def multi_class_dice_loss(self, input, mask):
-        assert input.size() == mask.size(), "Input sizes must be equal to mask, the input size is {}, and the" \
-                                            "mask size is {}".format(input.size(), mask.size())
-
-        # print(input.size())
-        # print(mask.size())
-
-        assert input.dim() == 4, "Input must be a 4D tensor"
-
-        num = (input * mask).sum(dim=3).sum(dim=2)
-        den1 = input.pow(2)
-        den2 = mask.pow(2)
-
-        dice = 2 * (num / (den1 + den2).sum(dim=3).sum(dim=2))
-        return 1. - dice.sum() / (dice.size(1) * dice.size(0))
-        
     def soft_dice_coeff(self, y_true, y_pred):
         smooth = 0.0  # may change
         if self.batch:
@@ -115,29 +85,16 @@ class dice_bce_loss(nn.Module):
             j = y_pred.sum(1).sum(1).sum(1)
             intersection = (y_true * y_pred).sum(1).sum(1).sum(1)
         score = (2. * intersection + smooth) / (i + j + smooth)
-        #score = (intersection + smooth) / (i + j - intersection + smooth)#iou
+        # score = (intersection + smooth) / (i + j - intersection + smooth)#iou
         return score.mean()
 
     def soft_dice_loss(self, y_true, y_pred):
         loss = 1 - self.soft_dice_coeff(y_true, y_pred)
         return loss
 
-        
     def __call__(self, y_true, y_pred):
-
-        y_prediction = self.softmax(y_pred)
-        # print("=====================")
-        # print(y_true.size(),y_pred.size(),y_prediction.size())
-        # print("=====================")
-        y_mask_one_hot = self.multi_class_one_hot(y_true, classes=12)
-
-        y_ce_true = y_true.squeeze(dim=1).long()
-
-        # print(y_prediction.size())
-        # print(y_mask_one_hot.size())
-
-        a = self.ce_loss(y_pred, y_ce_true)
-        # b = self.multi_class_dice_loss(y_prediction, y_mask_one_hot)
+        a = self.bce_loss(y_pred, y_true)
+        b = self.soft_dice_loss(y_true, y_pred)
         return a
 
 
