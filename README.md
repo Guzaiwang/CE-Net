@@ -12,3 +12,6 @@ The submission mainly contains:
 2. multi-class dice loss in loss.py
 3. data augmentation in data.py
 
+Update:
+We have modified the loss function. 
+The cuda error (or warning) will not occur. 
