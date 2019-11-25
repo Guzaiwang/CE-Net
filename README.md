@@ -15,3 +15,7 @@ The submission mainly contains:
 Update:
 We have modified the loss function. 
 The cuda error (or warning) will not occur. 
+
+Update:
+The test code has been uploaded. 
+Besides, we release a pretrained model, which achieves 0.9819 in the AUC scor in the DRIVE dataset. 
