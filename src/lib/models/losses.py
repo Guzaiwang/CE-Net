@@ -1,3 +1,5 @@
+# *coding:utf-8 *
+
 import torch
 import torch.nn as nn
 from torch.autograd import Variable as V
@@ -6,9 +8,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
+from utils.image import mask_to_boundary
 
 import cv2
 import numpy as np
+
+
 class weighted_cross_entropy(nn.Module):
     def __init__(self, num_classes=12, batch=True):
         super(weighted_cross_entropy, self).__init__()
@@ -17,10 +22,7 @@ class weighted_cross_entropy(nn.Module):
         self.ce_loss = nn.CrossEntropyLoss(weight=self.weight)
 
     def __call__(self, y_true, y_pred):
-
         y_ce_true = y_true.squeeze(dim=1).long()
-
-
         a = self.ce_loss(y_pred, y_ce_true)
 
         return a
@@ -55,7 +57,6 @@ class dice_loss(nn.Module):
         return b
 
 
-
 def test_weight_cross_entropy():
     N = 4
     C = 12
@@ -66,6 +67,59 @@ def test_weight_cross_entropy():
     inputs_fl = Variable(inputs.clone(), requires_grad=True)
     targets_fl = Variable(targets.clone())
     print(weighted_cross_entropy()(targets_fl, inputs_fl))
+
+
+class boundary_dice_bce_loss(nn.Module):
+    def __init__(self, batch=True):
+        super(boundary_dice_bce_loss, self).__init__()
+        self.batch = batch
+        self.bce_loss = nn.BCELoss()
+
+    def soft_dice_coeff(self, y_true, y_pred):
+        smooth = 0.0  # may change
+        if self.batch:
+            i = torch.sum(y_true)
+            j = torch.sum(y_pred)
+            intersection = torch.sum(y_true * y_pred)
+        else:
+            i = y_true.sum(1).sum(1).sum(1)
+            j = y_pred.sum(1).sum(1).sum(1)
+            intersection = (y_true * y_pred).sum(1).sum(1).sum(1)
+        score = (2. * intersection + smooth) / (i + j + smooth)
+        # score = (intersection + smooth) / (i + j - intersection + smooth)#iou
+        return score.mean()
+
+    def soft_dice_loss(self, y_true, y_pred):
+        loss = 1 - self.soft_dice_coeff(y_true, y_pred)
+        return loss
+
+    def batch_mask_to_boundary(self, y_true, y_pred):
+        batch, channel, height, width = y_true.size()
+        y_true_boundary_batch = np.zeros(shape=(batch, height, width))
+        y_pred_boundary_batch = np.zeros(shape=(batch, height, width))
+
+        for i in range(batch):
+            y_true_mask = y_true.cpu().detach().numpy()[i, 0, :, :]
+            y_pred_mask = y_pred.cpu().detach().numpy()[i, 0, :, :]
+            # shape (448, 448)(448, 448)
+            y_true_mask_boundary = mask_to_boundary(y_true_mask)
+            y_pred_mask_boundary = mask_to_boundary(y_pred_mask)
+
+            y_true_boundary_batch[i, :, :] = y_true_mask_boundary
+            y_pred_boundary_batch[i, :, :] = y_pred_mask_boundary
+
+        y_true_boundary_mask = torch.Tensor(y_true_boundary_batch).cuda()
+        y_pred_boundary_mask = torch.Tensor(y_pred_boundary_batch).cuda()
+        # torch.Size([12, 448, 448])
+        return y_true_boundary_mask, y_pred_boundary_mask
+
+    def __call__(self, y_true, y_pred):
+        # a = self.bce_loss(y_pred, y_true)
+        b = self.soft_dice_loss(y_true, y_pred)
+
+        y_true_boundary, y_pred_boundary = self.batch_mask_to_boundary(y_true, y_pred)
+        b_aux = self.soft_dice_loss(y_true_boundary, y_pred_boundary)
+        return b + b_aux
 
 
 class dice_bce_loss(nn.Module):
@@ -95,7 +149,8 @@ class dice_bce_loss(nn.Module):
     def __call__(self, y_true, y_pred):
         a = self.bce_loss(y_pred, y_true)
         b = self.soft_dice_loss(y_true, y_pred)
-        return a
+
+        return b
 
 
 import torch
@@ -142,43 +197,46 @@ class MulticlassDiceLoss(nn.Module):
         totalLoss = 0
 
         for i in range(C):
-            diceLoss = dice(input[:, i, :, :], target[:, i,:, :])
+            diceLoss = dice(input[:, i, :, :], target[:, i, :, :])
             if weights is not None:
                 diceLoss *= weights[i]
             totalLoss += diceLoss
 
         return totalLoss
 
+
 class FocalLoss(nn.Module):
     def __init__(self, gamma=0, alpha=None, size_average=True):
         super(FocalLoss, self).__init__()
         self.gamma = gamma
         self.alpha = alpha
-        if isinstance(alpha,(float,int)): self.alpha = torch.Tensor([alpha,1-alpha])
-        if isinstance(alpha,list): self.alpha = torch.Tensor(alpha)
+        if isinstance(alpha, (float, int)): self.alpha = torch.Tensor([alpha, 1 - alpha])
+        if isinstance(alpha, list): self.alpha = torch.Tensor(alpha)
         self.size_average = size_average
 
     def forward(self, target, input):
         target1 = torch.squeeze(target, dim=1)
-        if input.dim()>2:
-            input = input.view(input.size(0),input.size(1),-1)  # N,C,H,W => N,C,H*W
-            input = input.transpose(1,2)    # N,C,H*W => N,H*W,C
-            input = input.contiguous().view(-1,input.size(2))   # N,H*W,C => N*H*W,C
-        target2 = target1.view(-1,1).long()
+        if input.dim() > 2:
+            input = input.view(input.size(0), input.size(1), -1)  # N,C,H,W => N,C,H*W
+            input = input.transpose(1, 2)  # N,C,H*W => N,H*W,C
+            input = input.contiguous().view(-1, input.size(2))  # N,H*W,C => N*H*W,C
+        target2 = target1.view(-1, 1).long()
 
         logpt = F.log_softmax(input, dim=1)
         # print(logpt.size())
         # print(target2.size())
-        logpt = logpt.gather(1,target2)
+        logpt = logpt.gather(1, target2)
         logpt = logpt.view(-1)
         pt = Variable(logpt.data.exp())
 
         if self.alpha is not None:
-            if self.alpha.type()!=input.data.type():
+            if self.alpha.type() != input.data.type():
                 self.alpha = self.alpha.type_as(input.data)
-            at = self.alpha.gather(0,target.data.view(-1))
+            at = self.alpha.gather(0, target.data.view(-1))
             logpt = logpt * Variable(at)
 
-        loss = -1 * (1-pt)**self.gamma * logpt
-        if self.size_average: return loss.mean()
-        else: return loss.sum()
+        loss = -1 * (1 - pt) ** self.gamma * logpt
+        if self.size_average:
+            return loss.mean()
+        else:
+            return loss.sum()
