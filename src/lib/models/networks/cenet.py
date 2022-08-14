@@ -1,14 +1,16 @@
+# *coding:utf-8 *
+
 import torch
 import torch.nn as nn
 from torchvision import models
 import torch.nn.functional as F
 
+from .backbones.resnet.resnet_factory import get_resnet_backbone
+
+
 from functools import partial
 
-import Constants
-
 nonlinearity = partial(F.relu, inplace=True)
-
 
 class DACblock(nn.Module):
     def __init__(self, channel):
@@ -168,11 +170,11 @@ class DecoderBlock(nn.Module):
 
 
 class CE_Net_(nn.Module):
-    def __init__(self, num_classes=Constants.BINARY_CLASS, num_channels=3):
+    def __init__(self, num_classes=1, num_channels=3):
         super(CE_Net_, self).__init__()
-
         filters = [64, 128, 256, 512]
-        resnet = models.resnet34(pretrained=True)
+        # resnet = models.resnet34(pretrained=True)
+        resnet = get_resnet_backbone('resnet34')(pretrain=True)
         self.firstconv = resnet.conv1
         self.firstbn = resnet.bn1
         self.firstrelu = resnet.relu
@@ -217,13 +219,15 @@ class CE_Net_(nn.Module):
         d2 = self.decoder2(d3) + e1
         d1 = self.decoder1(d2)
 
+
         out = self.finaldeconv1(d1)
         out = self.finalrelu1(out)
         out = self.finalconv2(out)
         out = self.finalrelu2(out)
         out = self.finalconv3(out)
 
-        return F.sigmoid(out)
+        return torch.sigmoid(out)
+
 
 class CE_Net_backbone_DAC_without_atrous(nn.Module):
     def __init__(self, num_classes=1, num_channels=3):
@@ -281,7 +285,7 @@ class CE_Net_backbone_DAC_without_atrous(nn.Module):
         out = self.finalrelu2(out)
         out = self.finalconv3(out)
 
-        return F.sigmoid(out)
+        return torch.sigmoid(out)
 
 class CE_Net_backbone_DAC_with_inception(nn.Module):
     def __init__(self, num_classes=1, num_channels=3):
@@ -339,7 +343,7 @@ class CE_Net_backbone_DAC_with_inception(nn.Module):
         out = self.finalrelu2(out)
         out = self.finalconv3(out)
 
-        return F.sigmoid(out)
+        return torch.sigmoid(out)
 
 class CE_Net_backbone_inception_blocks(nn.Module):
     def __init__(self, num_classes=1, num_channels=3):
@@ -397,7 +401,7 @@ class CE_Net_backbone_inception_blocks(nn.Module):
         out = self.finalrelu2(out)
         out = self.finalconv3(out)
 
-        return F.sigmoid(out)
+        return torch.sigmoid(out)
 
 
 class CE_Net_OCT(nn.Module):
@@ -557,4 +561,4 @@ class UNet(nn.Module):
         x = self.up4(x, x1)
         x = self.outc(x)
         #x = self.relu(x)
-        return F.sigmoid(x)
+        return torch.sigmoid(x)

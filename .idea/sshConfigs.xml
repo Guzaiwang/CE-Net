@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SshConfigs">
+    <configs>
+      <sshConfig authType="PASSWORD" host="10.20.45.222" id="260a8399-1682-4acf-8e6e-aa5abeff5b76" port="22" customName="ustc" nameFormat="CUSTOM">
+        <option name="customName" value="ustc" />
+      </sshConfig>
+    </configs>
+  </component>
+</project>
